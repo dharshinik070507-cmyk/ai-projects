@@ -1,17 +1,16 @@
-import { auth, provider } from "@/firebase";
-import { signInWithPopup, signOut } from "firebase/auth";
-import { Button } from "@/components/ui/button";
+import { signInWithPopup, GoogleAuthProvider, signOut } from "firebase/auth";
+import { auth } from "@/firebase";
 import { useEffect, useState } from "react";
 
 export default function LoginButton() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState(auth.currentUser);
 
   useEffect(() => {
-    const unsub = auth.onAuthStateChanged(setUser);
-    return () => unsub();
+    return auth.onAuthStateChanged(u => setUser(u));
   }, []);
 
   const login = async () => {
+    const provider = new GoogleAuthProvider();
     await signInWithPopup(auth, provider);
   };
 
@@ -19,20 +18,14 @@ export default function LoginButton() {
     await signOut(auth);
   };
 
-  if (user) {
-    return (
-      <div className="flex items-center gap-3">
-        <img src={user.photoURL} className="w-8 h-8 rounded-full" />
-        <Button variant="outline" onClick={logout}>
-          Logout
-        </Button>
-      </div>
-    );
+  if (!user) {
+    return <button onClick={login}>Login with Google</button>;
   }
 
   return (
-    <Button onClick={login} className="bg-red-500 hover:bg-red-600 text-white">
-      Sign in with Google
-    </Button>
+    <div className="flex items-center gap-3">
+      <span>{user.displayName}</span>
+      <button onClick={logout}>Logout</button>
+    </div>
   );
 }
