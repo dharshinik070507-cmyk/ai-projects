@@ -4,25 +4,16 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import admin from "firebase-admin";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
 
-/* ================= ESM PATH FIX ================= */
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-/* ================= FIREBASE ADMIN (ESM FIX) ================= */
+/* ================= FIREBASE ADMIN (ENV BASED) ================= */
 
 if (!admin.apps.length) {
-  const serviceAccountPath = path.join(__dirname, "firebase-service-account.json");
-
-  const serviceAccount = JSON.parse(
-    fs.readFileSync(serviceAccountPath, "utf-8")
-  );
-
   admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
+    credential: admin.credential.cert({
+      projectId: process.env.FB_PROJECT_ID,
+      clientEmail: process.env.FB_CLIENT_EMAIL,
+      privateKey: process.env.FB_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+    }),
   });
 }
 
