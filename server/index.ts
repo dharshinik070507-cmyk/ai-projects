@@ -102,7 +102,7 @@ app.use((req, res, next) => {
     await setupVite(httpServer, app);
   }
 
-  const port = parseInt(process.env.PORT || "5008", 10);
+  const port = parseInt(process.env.PORT || "5009", 10);
 httpServer.listen(port, () => {
   log(`🚀 Server running at http://localhost:${port}`);
 });

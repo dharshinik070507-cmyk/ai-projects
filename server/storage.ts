@@ -1,22 +1,32 @@
-let reports: any[] = [];
-let idCounter = 1;
+import mongoose from "mongoose";
+
+/* ===== SCHEMA ===== */
+
+const GradingSchema = new mongoose.Schema({
+  userId: { type: String, required: true },   // 🔥 user link
+  imageUrl: String,
+  produceType: String,
+  grade: String,
+  confidence: Number,
+  analysis: Object,
+}, { timestamps: true });
+
+const Report = mongoose.model("Report", GradingSchema);
+
+/* ===== FUNCTIONS ===== */
 
 export const storage = {
+
   async createGradingReport(data: any) {
-    const report = {
-      id: idCounter++,
-      createdAt: new Date(),
-      ...data,
-    };
-    reports.push(report);
-    return report;
+    return await Report.create(data);
   },
 
-  async getGradingReports() {
-    return reports;
+  async getGradingReports(userId: string) {
+    return await Report.find({ userId }).sort({ createdAt: -1 });
   },
 
-  async getGradingReport(id: number) {
-    return reports.find(r => r.id === id);
-  },
+  async getGradingReport(id: number, userId: string) {
+    return await Report.findOne({ _id: id, userId });
+  }
+
 };

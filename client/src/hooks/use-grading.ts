@@ -1,62 +1,86 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, buildUrl, type GradeRequest } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
+import { auth } from "../firebase";
 
+/* ================= GET ALL REPORTS (HISTORY) ================= */
 export function useGradingReports() {
   return useQuery({
-    queryKey: [api.grading.list.path],
+    queryKey: ["reports"],
     queryFn: async () => {
-      const res = await fetch(api.grading.list.path, { credentials: "include" });
+      const user = auth.currentUser;
+      if (!user) throw new Error("Login required");
+
+      const token = await user.getIdToken();
+
+      const res = await fetch("/api/reports", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
       if (!res.ok) throw new Error("Failed to fetch reports");
-      return api.grading.list.responses[200].parse(await res.json());
+      return res.json();
     },
   });
 }
 
+/* ================= GET SINGLE REPORT ================= */
 export function useGradingReport(id: number) {
   return useQuery({
-    queryKey: [api.grading.get.path, id],
+    queryKey: ["report", id],
     queryFn: async () => {
-      const url = buildUrl(api.grading.get.path, { id });
-      const res = await fetch(url, { credentials: "include" });
-      if (res.status === 404) return null;
+      const user = auth.currentUser;
+      if (!user) throw new Error("Login required");
+
+      const token = await user.getIdToken();
+
+      const res = await fetch(`/api/reports/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
       if (!res.ok) throw new Error("Failed to fetch report");
-      return api.grading.get.responses[200].parse(await res.json());
+      return res.json();
     },
     enabled: !!id,
   });
 }
 
+/* ================= ANALYZE PRODUCE ================= */
 export function useGradeProduce() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (data: GradeRequest) => {
-      const res = await fetch(api.grading.grade.path, {
-        method: api.grading.grade.method,
-        headers: { "Content-Type": "application/json" },
+    mutationFn: async (data: { image: string; produceType: string }) => {
+      const user = auth.currentUser;
+      if (!user) throw new Error("You must login first");
+
+      const token = await user.getIdToken();
+
+      const res = await fetch("/api/grade", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(data),
-        credentials: "include",
       });
 
-      if (!res.ok) {
-        if (res.status === 400) {
-          const error = api.grading.grade.responses[400].parse(await res.json());
-          throw new Error(error.message);
-        }
-        throw new Error("Failed to analyze produce");
-      }
-      return api.grading.grade.responses[201].parse(await res.json());
+      if (!res.ok) throw new Error("Grading failed");
+      return res.json();
     },
+
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.grading.list.path] });
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
       toast({
         title: "Analysis Complete",
-        description: "Your produce has been successfully graded.",
+        description: "Your produce has been graded successfully.",
       });
     },
-    onError: (error) => {
+
+    onError: (error: any) => {
       toast({
         title: "Analysis Failed",
         description: error.message,

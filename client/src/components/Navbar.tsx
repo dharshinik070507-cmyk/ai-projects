@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Leaf, History, Home, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
+import LoginButton from "./LoginButton";
 
 export function Navbar() {
   const [location] = useLocation();
@@ -14,20 +15,20 @@ export function Navbar() {
   return (
     <nav className="bg-card border-b border-border sticky top-0 z-50 shadow-sm backdrop-blur-lg bg-opacity-90">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex items-center">
-            <Link href="/" className="flex items-center gap-2 group">
-              <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
-                <Leaf className="h-6 w-6 text-primary" />
-              </div>
-              <span className="font-display font-bold text-xl text-foreground tracking-tight">
-                Agri<span className="text-primary">Grade</span>
-              </span>
-            </Link>
-          </div>
+        <div className="flex justify-between h-16 items-center">
+          
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+              <Leaf className="h-6 w-6 text-primary" />
+            </div>
+            <span className="font-display font-bold text-xl text-foreground tracking-tight">
+              Agri<span className="text-primary">Grade</span>
+            </span>
+          </Link>
 
-          {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-1">
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center gap-2">
             {navItems.map((item) => {
               const isActive = location === item.href;
               const Icon = item.icon;
@@ -47,16 +48,21 @@ export function Navbar() {
                 </Link>
               );
             })}
+
+            {/* 🔥 Google Login Button */}
+            <div className="ml-3">
+              <LoginButton />
+            </div>
           </div>
 
-          {/* Mobile Nav Button (Simplified) */}
+          {/* Mobile Login Button */}
           <div className="md:hidden flex items-center">
-             {/* Mobile menu would go here in a full implementation */}
+            <LoginButton />
           </div>
         </div>
       </div>
-      
-      {/* Mobile Bottom Nav */}
+
+      {/* Mobile Bottom Navigation */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4 flex justify-around items-center z-50">
         {navItems.map((item) => {
           const isActive = location === item.href;

@@ -9,6 +9,11 @@ import Grade from "@/pages/Grade";
 import History from "@/pages/History";
 import ReportDetails from "@/pages/ReportDetails";
 import NotFound from "@/pages/not-found";
+import LoginButton from "@/components/LoginButton";
+<header className="flex justify-between items-center p-4 border-b">
+  <h1 className="font-bold text-xl">Agri Grade AI</h1>
+  <LoginButton />
+</header>
 
 function Router() {
   return (

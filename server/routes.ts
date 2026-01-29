@@ -2,8 +2,44 @@ import type { Express } from "express";
 import { type Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
-import { z } from "zod";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import admin from "firebase-admin";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+/* ================= ESM PATH FIX ================= */
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+/* ================= FIREBASE ADMIN (ESM FIX) ================= */
+
+if (!admin.apps.length) {
+  const serviceAccountPath = path.join(__dirname, "firebase-service-account.json");
+
+  const serviceAccount = JSON.parse(
+    fs.readFileSync(serviceAccountPath, "utf-8")
+  );
+
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+}
+
+async function verifyUser(req: any, res: any, next: any) {
+  try {
+    const header = req.headers.authorization;
+    if (!header) return res.status(401).json({ message: "No auth token" });
+
+    const token = header.split(" ")[1];
+    const decoded = await admin.auth().verifyIdToken(token);
+
+    req.user = decoded;
+    next();
+  } catch {
+    res.status(401).json({ message: "Invalid token" });
+  }
+}
 
 /* ================= GEMINI SETUP ================= */
 
@@ -14,8 +50,6 @@ let model: any = null;
 
 if (geminiKey) {
   const genAI = new GoogleGenerativeAI(geminiKey);
-
-  // ✅ ONLY MODEL YOUR SDK SUPPORTS
   model = genAI.getGenerativeModel({ model: "gemini-pro-vision" });
 } else {
   console.log("⚠ GEMINI KEY NOT FOUND — Using demo grading");
@@ -28,7 +62,8 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
 
-  app.post(api.grading.grade.path, async (req, res) => {
+  /* --------- CREATE GRADING (AUTH REQUIRED) --------- */
+  app.post(api.grading.grade.path, verifyUser, async (req: any, res) => {
     try {
       const input = api.grading.grade.input.parse(req.body);
       let aiResult;
@@ -50,7 +85,6 @@ export async function registerRoutes(
         console.log("AI RAW:", text);
 
         const jsonMatch = text.match(/\{[\s\S]*\}/);
-
         if (jsonMatch) {
           aiResult = JSON.parse(jsonMatch[0]);
         } else {
@@ -71,6 +105,7 @@ export async function registerRoutes(
       }
 
       const report = await storage.createGradingReport({
+        userId: req.user.uid,
         imageUrl: input.image,
         produceType: input.produceType,
         grade: aiResult.grade,
@@ -83,7 +118,6 @@ export async function registerRoutes(
     } catch (err) {
       console.error("Grading error:", err);
 
-      // 🔥 NEVER FAIL UI AGAIN
       const safeResult = {
         grade: "Grade B",
         confidence: 70,
@@ -98,6 +132,7 @@ export async function registerRoutes(
       const input = req.body;
 
       const report = await storage.createGradingReport({
+        userId: req.user.uid,
         imageUrl: input.image,
         produceType: input.produceType,
         ...safeResult,
@@ -107,12 +142,19 @@ export async function registerRoutes(
     }
   });
 
-  app.get(api.grading.list.path, async (_req, res) => {
-    res.json(await storage.getGradingReports());
+  /* --------- LIST USER REPORTS --------- */
+  app.get(api.grading.list.path, verifyUser, async (req: any, res) => {
+    const reports = await storage.getGradingReports(req.user.uid);
+    res.json(reports);
   });
 
-  app.get(api.grading.get.path, async (req, res) => {
-    const report = await storage.getGradingReport(Number(req.params.id));
+  /* --------- GET SINGLE REPORT --------- */
+  app.get(api.grading.get.path, verifyUser, async (req: any, res) => {
+    const report = await storage.getGradingReport(
+      Number(req.params.id),
+      req.user.uid
+    );
+
     if (!report) return res.status(404).json({ message: "Report not found" });
     res.json(report);
   });
