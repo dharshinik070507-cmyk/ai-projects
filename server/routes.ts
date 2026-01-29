@@ -60,7 +60,7 @@ export async function registerRoutes(
       let aiResult;
 
       if (model) {
-        const cleanImage = input.image.replace(/^data:image\/\w+;base64,/, "");
+const cleanImage = input.image.split(",")[1];
 
         const result = await model.generateContent([
           "You are an agricultural grading expert. Return ONLY JSON.",
